@@ -9,12 +9,48 @@ The goal of this project is to design a pipeline to reconstruct a high-resolutio
 - Python 3.x
 - PyTorch
 - OpenCV
-- (Add other dependencies like torchvision, numpy, etc.)
+- numpy
 
-```bash
-# Clone this repository
-git clone [https://github.com/Summer-916/AIAA3201-Video-Super-Resolution.git](https://github.com/Summer-916/AIAA3201-Video-Super-Resolution.git)
-cd AIAA3201-Video-Super-Resolution
+### Installation
+Clone this repository and enter the directory:
 
-# Install requirements
-[Command to install requirements]
+> git clone [https://github.com/yourusername/AIAA3201-Video-Super-Resolution.git](https://github.com/yourusername/AIAA3201-Video-Super-Resolution.git)
+> 
+> cd AIAA3201-Video-Super-Resolution
+
+
+## 🚀 Implementation Roadmap
+
+### Part 1: The Baseline (Hand-crafted Approach)
+- [x] **Bicubic & Lanczos Interpolation** (Spatial upsampling base)
+- [x] **SRCNN** (Basic 3-layer CNN architecture designed)
+- [x] **Multi-frame Averaging** (Temporal fusion with unsharp masking)
+
+*How to run Part 1:*
+
+1. Extract frames from your raw video:
+> python utils/data_loader.py
+
+2. Run the baseline pipeline (Bicubic and Temporal Fusion):
+> python run_baseline.py
+
+
+### Part 2: SOTA Reproduction (AI-driven Pipeline)
+- [ ] **BasicVSR** (Feature Alignment & Reconstruction)
+- [ ] **Real-ESRGAN** (Perceptual Enhancement)
+
+### Part 3: Exploration (Optimization & Extension)
+- [ ] To be determined (e.g., Generative VSR / Consistent Enhancement)
+
+## 📁 Repository Structure
+* `data/` - ⚠️ Ignored by Git. Contains test videos and extracted frames.
+* `models/` - Model architectures.
+  * `srcnn.py` - Part 1: Simple 3-layer CNN structure.
+* `utils/` - Helper functions.
+  * `data_loader.py` - Script to extract PNG frames from .mp4 videos.
+  * `interpolation.py` - Part 1: Bicubic and Lanczos algorithms.
+  * `temporal_baseline.py` - Part 1: Multi-frame averaging and unsharp masking.
+* `results/` - ⚠️ Ignored by Git. Output HR frames.
+* `run_baseline.py` - Main execution script for Part 1 testing.
+* `.gitignore` - Rules to ignore large data/weights files.
+* `README.md` - Project documentation.

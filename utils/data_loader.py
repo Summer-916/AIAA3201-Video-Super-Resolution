@@ -60,10 +60,8 @@ def load_frames(frame_dir):
 # 测试代码块：当你直接运行这个脚本时会执行这里
 # ==========================================
 if __name__ == "__main__":
-    # 假设你刚刚拍了一段测试视频，放在了这个路径下
-    test_video = "../data/wild/test_video.mp4" 
-    # 我们把拆出来的帧放在这
-    output_frames_dir = "../data/wild/extracted_frames"
+    test_video = "data/wild/test_video.mp4" 
+    output_frames_dir = "data/wild/extracted_frames"
     
     # 运行提取逻辑 (你可以把 test_video 换成你实际的文件路径来测试)
     # 如果文件存在，它就会跑起来
