@@ -4,68 +4,68 @@ import glob
 
 def extract_frames(video_path, output_dir):
     """
-    将视频按帧提取为图片并保存到指定目录。
+    Extract frames from a video and save them as images in the specified directory.
     
-    参数:
-        video_path (str): 视频文件的路径 (例如 'data/wild/my_test_video.mp4')
-        output_dir (str): 提取出的帧要保存的文件夹路径
-    返回:
-        list: 包含所有已保存图片路径的列表
+    Args:
+        video_path (str): Path to the video file (e.g., 'data/wild/my_test_video.mp4')
+        output_dir (str): Path to the folder where extracted frames will be saved
+    Returns:
+        list: A list containing the paths of all saved images
     """
-    # 如果输出目录不存在，则创建它
+    # Create the output directory if it does not exist
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    # 使用 OpenCV 读取视频
+    # Read the video using OpenCV
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
-        print(f"❌ 错误：无法打开视频文件 {video_path}，请检查路径是否正确！")
+        print(f"Error: Cannot open video file {video_path}. Please check if the path is correct.")
         return []
 
     frame_paths = []
     frame_idx = 0
-    print(f"🎬 开始拆解视频: {video_path}")
+    print(f"Starting to extract frames from video: {video_path}")
     
     while True:
         ret, frame = cap.read()
         if not ret:
-            break # 视频读取完毕
+            break # Finished reading video
             
-        # 格式化保存的文件名，例如 0000.png, 0001.png
-        # 使用 PNG 格式可以避免 JPEG 压缩带来的二次画质损失
+        # Format the saved filename, e.g., 0000.png, 0001.png
+        # Using PNG format avoids secondary quality loss from JPEG compression
         out_path = os.path.join(output_dir, f"{frame_idx:04d}.png")
         cv2.imwrite(out_path, frame)
         frame_paths.append(out_path)
         
-        # 打印进度，防止处理大视频时以为程序卡死了
+        # Print progress to indicate the program is still running for large videos
         if frame_idx % 50 == 0 and frame_idx > 0:
-            print(f"  已提取 {frame_idx} 帧...")
+            print(f"  Extracted {frame_idx} frames...")
             
         frame_idx += 1
 
     cap.release()
-    print(f"✅ 提取完成！共计 {frame_idx} 帧，已保存至: {output_dir}")
+    print(f"Extraction complete! Total {frame_idx} frames saved to: {output_dir}")
     return frame_paths
 
 def load_frames(frame_dir):
     """
-    读取已经提取好的帧序列。
+    Load the sequence of extracted frames.
     """
-    # 按照文件名顺序排序读取，确保时序正确
+    # Read in alphabetical order of filenames to ensure correct chronological sequence
     frame_paths = sorted(glob.glob(os.path.join(frame_dir, "*.png")))
     frames = [cv2.imread(p) for p in frame_paths]
     return frames
 
 # ==========================================
-# 测试代码块：当你直接运行这个脚本时会执行这里
+# Test block: This will be executed when you run the script directly
 # ==========================================
 if __name__ == "__main__":
     test_video = "data/wild/test_video.mp4" 
     output_frames_dir = "data/wild/extracted_frames"
     
-    # 运行提取逻辑 (你可以把 test_video 换成你实际的文件路径来测试)
-    # 如果文件存在，它就会跑起来
+    # Run extraction logic (you can replace test_video with your actual file path to test)
+    # It will run if the file exists
     if os.path.exists(test_video):
         extract_frames(test_video, output_frames_dir)
     else:
-        print(f"⚠️ 测试视频 {test_video} 不存在。请先放入一个视频文件进行测试。")
+        print(f"Test video {test_video} does not exist. Please place a video file first to test.")

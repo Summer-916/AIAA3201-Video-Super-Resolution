@@ -42,15 +42,11 @@ Clone this repository and enter the directory:
 ### Part 3: Exploration (Optimization & Extension)
 - [ ] To be determined (e.g., Generative VSR / Consistent Enhancement)
 
-## 📁 Repository Structure
-* `data/` - ⚠️ Ignored by Git. Contains test videos and extracted frames.
-* `models/` - Model architectures.
-  * `srcnn.py` - Part 1: Simple 3-layer CNN structure.
-* `utils/` - Helper functions.
-  * `data_loader.py` - Script to extract PNG frames from .mp4 videos.
-  * `interpolation.py` - Part 1: Bicubic and Lanczos algorithms.
-  * `temporal_baseline.py` - Part 1: Multi-frame averaging and unsharp masking.
-* `results/` - ⚠️ Ignored by Git. Output HR frames.
-* `run_baseline.py` - Main execution script for Part 1 testing.
-* `.gitignore` - Rules to ignore large data/weights files.
-* `README.md` - Project documentation.
+## 📁 Project Structure
+
+* `models/` - Contains the SRCNN neural network architecture.
+* `scripts/` - Core execution scripts for inference and evaluation.
+* `utils/` - Helper functions for frame extraction and interpolation.
+* `train_srcnn.py` - Script to train the SRCNN model.
+* `data/` - (Ignored by Git) Put your raw videos and datasets here.
+* `results/` - (Ignored by Git) Generated output images will be saved here.
