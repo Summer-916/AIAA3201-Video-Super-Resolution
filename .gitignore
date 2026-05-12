@@ -209,3 +209,4 @@ __marimo__/
 # ignore result folders
 data/
 results/
+weights/*.pth

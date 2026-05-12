@@ -1,60 +1,92 @@
-import os
+import argparse
+import csv
+from pathlib import Path
+
 import numpy as np
-from skimage.metrics import peak_signal_noise_ratio as psnr
-from skimage.metrics import structural_similarity as ssim
 from PIL import Image
-from tqdm import tqdm
+from skimage.metrics import peak_signal_noise_ratio, structural_similarity
 
-def calculate_metrics(gt_dir, test_dir):
-    """Calculate average PSNR and SSIM for corresponding images in two directories"""
-    if not os.path.exists(test_dir):
-        return 0.0, 0.0
-        
-    gt_files = sorted([f for f in os.listdir(gt_dir) if f.endswith('.png')])
-    test_files = sorted([f for f in os.listdir(test_dir) if f.endswith('.png')])
-    
-    # Ensure the files match up
-    common_files = set(gt_files).intersection(test_files)
-    if not common_files:
-        return 0.0, 0.0
 
-    total_psnr, total_ssim = 0.0, 0.0
-    count = 0
+IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp"}
 
-    for filename in common_files:
-        gt_img = np.array(Image.open(os.path.join(gt_dir, filename)).convert('RGB'))
-        test_img = np.array(Image.open(os.path.join(test_dir, filename)).convert('RGB'))
-        
-        # Ensure dimensions match before calculating metrics
-        if gt_img.shape == test_img.shape:
-            # Calculate PSNR
-            total_psnr += psnr(gt_img, test_img, data_range=255)
-            # Calculate SSIM (channel_axis=-1 indicates RGB images)
-            total_ssim += ssim(gt_img, test_img, data_range=255, channel_axis=-1)
-            count += 1
 
-    return (total_psnr / count), (total_ssim / count) if count > 0 else (0, 0)
+def list_images(frame_dir):
+    return sorted(
+        p for p in Path(frame_dir).iterdir()
+        if p.is_file() and p.suffix.lower() in IMAGE_EXTS and not p.name.startswith("._")
+    )
+
+
+def load_rgb(path):
+    return np.array(Image.open(path).convert("RGB"))
+
+
+def calculate_metrics(gt_dir, pred_dir):
+    gt_dir = Path(gt_dir)
+    pred_dir = Path(pred_dir)
+    psnr_values = []
+    ssim_values = []
+
+    for gt_path in list_images(gt_dir):
+        pred_path = pred_dir / gt_path.name
+        if not pred_path.exists():
+            continue
+        gt = load_rgb(gt_path)
+        pred = load_rgb(pred_path)
+        if gt.shape != pred.shape:
+            continue
+        psnr_values.append(peak_signal_noise_ratio(gt, pred, data_range=255))
+        ssim_values.append(structural_similarity(gt, pred, data_range=255, channel_axis=-1))
+
+    if not psnr_values:
+        return None
+    return {
+        "frames": len(psnr_values),
+        "psnr": float(np.mean(psnr_values)),
+        "ssim": float(np.mean(ssim_values)),
+    }
+
 
 def main():
-    print("Starting evaluation metrics calculation (PSNR & SSIM)...")
-    
-    # Using Sequence 002 from REDS-sample as an example for evaluation
-    # Note: Please ensure the images in these paths have already been generated!
-    gt_path = "data/sample/REDS-sample/REDS-sample/002"
-    bicubic_path = "results/part1/sample/REDS/002/bicubic"  # Assuming your Bicubic results are stored here
-    srcnn_path = "results/part1/sample/REDS/002/srcnn"      # Assuming your SRCNN results are stored here
+    parser = argparse.ArgumentParser(description="Evaluate Part 1 outputs with PSNR and SSIM.")
+    parser.add_argument("--results", default="results/part1")
+    parser.add_argument("--output", default="results/part1/metrics_part1.csv")
+    args = parser.parse_args()
 
-    print("\n--- REDS-sample (Sequence 002) Evaluation Results ---")
-    
-    # 1. Calculate Bicubic scores
-    bicubic_psnr, bicubic_ssim = calculate_metrics(gt_path, bicubic_path)
-    print(f"Bicubic -> PSNR: {bicubic_psnr:.2f} dB, SSIM: {bicubic_ssim:.4f}")
-    
-    # 2. Calculate SRCNN scores
-    srcnn_psnr, srcnn_ssim = calculate_metrics(gt_path, srcnn_path)
-    print(f"SRCNN   -> PSNR: {srcnn_psnr:.2f} dB, SSIM: {srcnn_ssim:.4f}")
-    
-    print("\nYou can plug these numbers directly into your PPT tables!")
+    ground_truth = {
+        "REDS_002": "data/sample/REDS-sample/REDS-sample/002",
+        "Vimeo_00018_0043": "data/sample/vimeo-RL/vimeo-RL/00018/0043",
+    }
+    methods = ["bicubic", "lanczos", "srcnn", "temporal"]
+
+    rows = []
+    for sequence, gt_dir in ground_truth.items():
+        for method in methods:
+            pred_dir = Path(args.results) / sequence / method
+            if not pred_dir.exists():
+                continue
+            metrics = calculate_metrics(gt_dir, pred_dir)
+            if metrics is None:
+                continue
+            rows.append({
+                "sequence": sequence,
+                "method": method,
+                "frames": metrics["frames"],
+                "psnr": f"{metrics['psnr']:.4f}",
+                "ssim": f"{metrics['ssim']:.6f}",
+            })
+
+    output = Path(args.output)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with output.open("w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=["sequence", "method", "frames", "psnr", "ssim"])
+        writer.writeheader()
+        writer.writerows(rows)
+
+    print(f"Saved {len(rows)} metric rows to {output}")
+    for row in rows:
+        print(f"{row['sequence']:18s} {row['method']:9s} PSNR={row['psnr']} SSIM={row['ssim']}")
+
 
 if __name__ == "__main__":
     main()

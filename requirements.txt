@@ -1,0 +1,11 @@
+numpy>=1.26,<2
+torch>=2.1
+torchvision>=0.16
+opencv-python-headless==4.9.0.80
+Pillow>=10
+scikit-image>=0.25
+tqdm>=4.64
+basicsr==1.4.2
+facexlib==0.3.0
+gfpgan==1.3.8
+realesrgan==0.3.0
