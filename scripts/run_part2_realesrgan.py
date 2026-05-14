@@ -39,6 +39,8 @@ def bgr_to_pil(image):
 
 
 def make_lr(image, scale):
+    # Synthetic evaluation follows the Part 1 degradation protocol:
+    # bicubic downsample HR -> LR, then reconstruct back to HR.
     lr_size = (max(1, image.width // scale), max(1, image.height // scale))
     return image.resize(lr_size, Image.BICUBIC)
 
@@ -50,6 +52,7 @@ def resize_to(image, target_size):
 
 
 def label_strip(images, labels):
+    # Create a compact labeled figure that can be dropped into the report.
     font_h = 28
     widths, heights = zip(*(img.size for img in images))
     canvas = Image.new("RGB", (sum(widths), max(heights) + font_h), "white")
@@ -73,7 +76,8 @@ def save_video(frames, output_path, fps=24):
 
 
 def build_upsampler(weights_path, tile, half, device):
-    # RealESRGAN_x4plus uses an RRDBNet backbone; tiling avoids VRAM spikes on big frames.
+    # RealESRGAN_x4plus uses an RRDBNet backbone. Tiling avoids VRAM spikes on
+    # 720p frames while preserving the final full-resolution output.
     model = RRDBNet(
         num_in_ch=3,
         num_out_ch=3,
@@ -101,7 +105,8 @@ def enhance_pil(upsampler, image, outscale):
 
 
 def calculate_metrics(gt_dir, pred_dir):
-    # GAN/perceptual SR may look sharper even when PSNR/SSIM is lower.
+    # GAN/perceptual SR may look sharper even when PSNR/SSIM is lower. Keeping
+    # these metrics makes the perception-distortion trade-off explicit.
     psnr_values = []
     ssim_values = []
     for gt_path in list_images(gt_dir):
@@ -124,6 +129,12 @@ def calculate_metrics(gt_dir, pred_dir):
 
 
 def process_synthetic_sequence(name, input_dir, output_root, scale, upsampler, max_frames=None):
+    """Run Real-ESRGAN on one synthetic LR/GT sequence.
+
+    Real-ESRGAN is image-based, so frames are enhanced independently. This is a
+    useful perceptual baseline, but it may be less temporally stable than VSR
+    models such as BasicVSR++.
+    """
     paths = list_images(input_dir)
     if max_frames:
         paths = paths[:max_frames]
@@ -170,6 +181,7 @@ def process_synthetic_sequence(name, input_dir, output_root, scale, upsampler, m
 
 
 def process_real_sequence(name, input_dir, output_root, real_scale, upsampler, max_frames):
+    """Run Real-ESRGAN on real LR frames for qualitative inspection only."""
     paths = list_images(input_dir)
     if max_frames == 0:
         print(f"[skip] {name}: --max-wild-frames 0")
@@ -249,6 +261,8 @@ def main():
         "Vimeo_00018_0043": "data/sample/vimeo-RL/vimeo-RL/00018/0043",
     }
 
+    # Synthetic sequences provide GT metrics. The wild sequence has no GT and
+    # therefore contributes only figures and processed videos.
     rows = []
     for name, path in synthetic_sequences.items():
         if Path(path).exists():

@@ -8,6 +8,9 @@ from pathlib import Path
 
 
 FILES = [
+    # Validation GT/LR are the important benchmark files for this project. The
+    # train archives are listed as optional extras because the official REDS
+    # Google Drive links may hit download quota limits.
     {
         "name": "val_sharp_bicubic.zip",
         "google_id": "1sChhtzN9Css10gX7Xsmc2JaC-2Pzco6a",
@@ -36,10 +39,13 @@ FILES = [
 
 
 def file_complete(path, expected_size):
+    # Google Drive downloads can leave partial files. Exact size checking lets
+    # --continue resume safely and avoids extracting corrupted archives.
     return path.exists() and path.stat().st_size == expected_size
 
 
 def download_with_gdown(item, archive_dir, proxy, retries):
+    """Download one REDS archive with retry and size validation."""
     archive_path = archive_dir / item["name"]
     if file_complete(archive_path, item["size"]):
         print(f"[skip] {archive_path} is complete")
@@ -55,6 +61,7 @@ def download_with_gdown(item, archive_dir, proxy, retries):
         str(archive_path),
     ]
     if proxy:
+        # AutoDL environments often use a local proxy; gdown accepts it directly.
         command[3:3] = ["--proxy", proxy]
 
     print(f"[download] {item['name']} -> {archive_path}", flush=True)
@@ -83,6 +90,7 @@ def download_with_gdown(item, archive_dir, proxy, retries):
 
 
 def extract_zip(archive_path, output_root):
+    # A marker file avoids re-extracting large archives on subsequent runs.
     marker = output_root / f".{archive_path.stem}.extracted"
     if marker.exists():
         print(f"[skip] {archive_path.name} already extracted")
@@ -107,6 +115,8 @@ def main():
     archive_dir.mkdir(parents=True, exist_ok=True)
 
     for item in FILES:
+        # Download order starts with validation files so benchmark experiments
+        # can run even if the large training GT archive later hits quota limits.
         archive_path = download_with_gdown(item, archive_dir, args.proxy, args.retries)
         if not args.no_extract:
             extract_zip(archive_path, root)

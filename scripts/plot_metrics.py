@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 
+# Fixed display order keeps all report plots comparable across Part 1/2/3.
 METHOD_ORDER = [
     "bicubic",
     "lanczos",
@@ -39,6 +40,12 @@ METRIC_FILES = [
 
 
 def load_metrics(metric_files):
+    """Load per-part metric CSVs and normalize their method ordering.
+
+    The individual scripts produce separate CSV files. This function merges them
+    into one table so the report can show a single PSNR/SSIM trend across the
+    whole project pipeline.
+    """
     frames = []
     for path in metric_files:
         path = Path(path)
@@ -66,6 +73,7 @@ def style_axis(ax, ylabel):
 
 
 def plot_metric(data, metric, output_path):
+    """Draw one line plot for a single metric across all implemented methods."""
     fig, ax = plt.subplots(figsize=(12, 5.8))
     x_labels = [METHOD_LABELS[m] for m in METHOD_ORDER]
     x_positions = list(range(len(METHOD_ORDER)))
@@ -87,6 +95,7 @@ def plot_metric(data, metric, output_path):
 
 
 def plot_combined(data, output_path):
+    """Draw the compact two-panel plot used as the main report figure."""
     fig, axes = plt.subplots(2, 1, figsize=(12, 9), sharex=True)
     x_labels = [METHOD_LABELS[m] for m in METHOD_ORDER]
     x_positions = list(range(len(METHOD_ORDER)))
@@ -110,6 +119,7 @@ def plot_combined(data, output_path):
 
 
 def save_summary_table(data, output_path):
+    # Store the merged table so the plotted values can be audited manually.
     table = data.copy()
     table["method_label"] = table["method"].map(METHOD_LABELS)
     table = table[["sequence", "method", "method_label", "frames", "psnr", "ssim", "source_file"]]

@@ -22,6 +22,12 @@ def load_rgb(path):
 
 
 def calculate_metrics(gt_dir, pred_dir):
+    """Compute average PSNR/SSIM for matching prediction and GT frame names.
+
+    This script is intentionally limited to Part 1 sample outputs. Wild videos
+    do not have GT, so they are excluded from quantitative metrics and should be
+    discussed qualitatively in the report.
+    """
     gt_dir = Path(gt_dir)
     pred_dir = Path(pred_dir)
     psnr_values = []
@@ -57,6 +63,7 @@ def main():
         "REDS_002": "data/sample/REDS-sample/REDS-sample/002",
         "Vimeo_00018_0043": "data/sample/vimeo-RL/vimeo-RL/00018/0043",
     }
+    # These are exactly the Part 1 methods requested by the project handout.
     methods = ["bicubic", "lanczos", "srcnn", "temporal"]
 
     rows = []

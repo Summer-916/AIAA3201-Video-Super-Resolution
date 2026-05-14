@@ -58,6 +58,11 @@ def label_strip(images, labels):
 
 
 def normalize_map(value, percentile=95):
+    """Robustly normalize a score map to [0, 1] for mask construction.
+
+    Percentile scaling prevents a few extreme pixels from dominating the mask,
+    which makes the fusion behavior easier to inspect and reproduce.
+    """
     scale = np.percentile(value, percentile)
     if scale < 1e-6:
         return np.zeros_like(value, dtype=np.float32)
@@ -65,6 +70,8 @@ def normalize_map(value, percentile=95):
 
 
 def edge_strength(rgb):
+    # High edge/texture strength indicates locations where perceptual details
+    # from Real-ESRGAN may be useful.
     gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
     grad_x = cv2.Sobel(gray, cv2.CV_32F, 1, 0, ksize=3)
     grad_y = cv2.Sobel(gray, cv2.CV_32F, 0, 1, ksize=3)
@@ -72,6 +79,8 @@ def edge_strength(rgb):
 
 
 def frame_difference(frames, idx):
+    # Approximate local temporal motion without optical flow. Large differences
+    # are treated as risky regions for hallucinated details.
     current = frames[idx].astype(np.float32)
     diffs = []
     if idx > 0:
@@ -84,6 +93,13 @@ def frame_difference(frames, idx):
 
 
 def adaptive_mask(stable_frames, detail_frames, idx, base_weight, max_weight):
+    """Build the Part 3 fusion mask for one frame.
+
+    stable_frames are BasicVSR++ outputs and serve as the faithful temporal
+    backbone. detail_frames are Real-ESRGAN outputs and serve as a sharper
+    perceptual detail source. The mask increases in textured areas and decreases
+    when methods disagree or when local temporal change is high.
+    """
     stable = stable_frames[idx].astype(np.float32)
     detail = detail_frames[idx].astype(np.float32)
 
@@ -101,6 +117,8 @@ def adaptive_mask(stable_frames, detail_frames, idx, base_weight, max_weight):
 
 
 def fuse_frame(stable, detail, mask):
+    # Pixel-wise convex combination. max_weight below 1 keeps BasicVSR++ as the
+    # dominant source everywhere, which protects PSNR/SSIM.
     stable = stable.astype(np.float32)
     detail = detail.astype(np.float32)
     mask3 = mask[:, :, None]
@@ -109,6 +127,8 @@ def fuse_frame(stable, detail, mask):
 
 
 def calculate_metrics(gt_dir, pred_dir):
+    # Use the same PSNR/SSIM protocol as Parts 1 and 2 so Part 3 can be compared
+    # directly against both baselines and SOTA reproductions.
     psnr_values = []
     ssim_values = []
     for gt_path in list_images(gt_dir):
@@ -131,6 +151,8 @@ def calculate_metrics(gt_dir, pred_dir):
 
 
 def common_paths(stable_dir, detail_dir, max_frames=None):
+    # Fuse only frames that exist in both source methods. This keeps filenames
+    # aligned and avoids silently using partial outputs.
     stable = {p.name: p for p in list_images(stable_dir)}
     detail = {p.name: p for p in list_images(detail_dir)}
     names = sorted(set(stable).intersection(detail))
@@ -149,6 +171,7 @@ def process_sequence(
     base_weight=0.18,
     max_weight=0.65,
 ):
+    """Fuse BasicVSR++ and Real-ESRGAN outputs for one sequence."""
     pairs = common_paths(stable_dir, detail_dir, max_frames=max_frames)
     if not pairs:
         print(f"[skip] {name}: no common frames")
@@ -159,6 +182,8 @@ def process_sequence(
         ensure_dir(seq_root / subdir)
 
     stable_frames = [np.array(load_rgb(stable_path)) for _, stable_path, _ in pairs]
+    # Detail frames are resized to stable-frame dimensions because image-based
+    # SR and video SR can differ slightly for odd input sizes.
     detail_frames = [np.array(load_rgb(detail_path).resize((stable_frames[i].shape[1], stable_frames[i].shape[0]), Image.BICUBIC))
                      for i, (_, _, detail_path) in enumerate(pairs)]
 
@@ -169,6 +194,8 @@ def process_sequence(
         fused = fuse_frame(stable_frames[idx], detail_frames[idx], mask)
         fused_frames.append(fused)
 
+        # Save both the fused frame and a colorized mask. The mask explains
+        # where Real-ESRGAN was allowed to contribute.
         bgr_to_pil(cv2.applyColorMap((mask * 255).astype(np.uint8), cv2.COLORMAP_TURBO)).save(seq_root / "masks" / filename)
         Image.fromarray(fused).save(seq_root / "frames" / filename)
 
@@ -231,6 +258,8 @@ def main():
         "REDS_002": "data/sample/REDS-sample/REDS-sample/002",
         "Vimeo_00018_0043": "data/sample/vimeo-RL/vimeo-RL/00018/0043",
     }
+    # Part 3 consumes Part 2 frame folders, so run Real-ESRGAN and BasicVSR++
+    # before invoking this script.
     for name, gt_dir in synthetic.items():
         metrics = process_sequence(
             name=name,

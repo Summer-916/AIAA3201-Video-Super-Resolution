@@ -18,6 +18,8 @@ def map_mmedit_basicvsrpp_state_dict(state_dict):
     # This remaps the official MMagic checkpoint into the BasicSR architecture.
     mapped = {}
     for key, value in state_dict.items():
+        # step_counter is optimizer/training bookkeeping and is not a model
+        # parameter required for inference.
         if key == "step_counter":
             continue
         if key.startswith("generator."):
@@ -36,6 +38,8 @@ def map_mmedit_basicvsrpp_state_dict(state_dict):
 
 def load_basicvsrpp(weights_path, device):
     # Load the official REDS4 BasicVSR++ checkpoint after key-name conversion.
+    # The rest of the evaluation path is shared with BasicVSR to keep the
+    # comparison controlled.
     model = BasicVSRPlusPlus().to(device)
     checkpoint = torch.load(weights_path, map_location=device)
     state_dict = checkpoint.get("state_dict", checkpoint.get("params", checkpoint))
@@ -46,6 +50,8 @@ def load_basicvsrpp(weights_path, device):
 
 
 def write_metrics(rows, output_path):
+    # process_synthetic_sequence returns a method field; force the public label
+    # to basicvsrpp here so the merged plots use a consistent method id.
     output_path = Path(output_path)
     ensure_dir(output_path.parent)
     with output_path.open("w", newline="") as f:
@@ -87,6 +93,9 @@ def main():
         "Vimeo_00018_0043": "data/sample/vimeo-RL/vimeo-RL/00018/0043",
     }
 
+    # BasicVSR++ is evaluated on the same sample sequences as BasicVSR. The full
+    # REDS validation benchmark later uses BasicVSR++ as the stronger VSR
+    # representative to control total runtime.
     rows = []
     for name, path in synthetic_sequences.items():
         if Path(path).exists():

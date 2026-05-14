@@ -16,6 +16,7 @@ IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp"}
 
 
 def list_images(frame_dir):
+    """List frames in deterministic temporal order."""
     return sorted(
         p for p in Path(frame_dir).iterdir()
         if p.is_file() and p.suffix.lower() in IMAGE_EXTS and not p.name.startswith("._")
@@ -51,11 +52,14 @@ def resize_to(image, target_size):
 
 
 def load_sequence_tensor(images, device):
+    # BasicVSR consumes a whole video clip as (B, T, C, H, W). The batch size is
+    # one because each REDS/Vimeo sequence is evaluated independently.
     tensors = [transforms.ToTensor()(image) for image in images]
     return torch.stack(tensors, dim=0).unsqueeze(0).to(device)
 
 
 def label_strip(images, labels):
+    # Labeled comparison strip used for report-ready qualitative examples.
     font_h = 28
     widths, heights = zip(*(img.size for img in images))
     canvas = Image.new("RGB", (sum(widths), max(heights) + font_h), "white")
@@ -102,7 +106,8 @@ def calculate_metrics(gt_dir, pred_dir):
 
 
 def load_basicvsr(weights_path, device, num_block):
-    # The downloaded REDS4 checkpoint was trained with 30 residual blocks.
+    # The downloaded REDS4 checkpoint was trained with 30 residual blocks. The
+    # value is configurable for debugging, but the default matches the weights.
     model = BasicVSR(num_block=num_block).to(device)
     checkpoint = torch.load(weights_path, map_location=device)
     params = checkpoint.get("params", checkpoint)
@@ -130,6 +135,8 @@ def run_model(model, lr_images, device):
     input_tensor = load_sequence_tensor(lr_images, device)
     input_tensor, original_lr_size = pad_sequence_tensor(input_tensor)
     with torch.no_grad():
+        # Inference is done in evaluation mode without gradients to reduce VRAM
+        # and keep outputs deterministic.
         output = model(input_tensor).squeeze(0)
     original_h, original_w = original_lr_size
     # Remove any padding after the 4x model output.
@@ -148,6 +155,7 @@ def process_synthetic_sequence(
     method_dir="basicvsr",
     method_label="BasicVSR",
 ):
+    """Run BasicVSR/BasicVSR++ style model on one synthetic sequence."""
     paths = list_images(input_dir)
     if max_frames:
         paths = paths[:max_frames]
@@ -160,13 +168,16 @@ def process_synthetic_sequence(
         ensure_dir(seq_root / subdir)
 
     gt_images = [load_rgb(path) for path in paths]
-    # For benchmark-like evaluation, HR frames are degraded to LR and reconstructed.
+    # For benchmark-like evaluation, HR frames are degraded to LR and
+    # reconstructed. The original HR frames remain GT for PSNR/SSIM.
     lr_images = [make_lr(image, scale) for image in gt_images]
     print(f"[run] {method_label} synthetic {name}: {len(paths)} frames, LR size={lr_images[0].size}")
     sr_images = run_model(model, lr_images, device)
 
     video_frames = []
     for path, gt, lr, sr in zip(paths, gt_images, lr_images, sr_images):
+        # Some models/padding paths can produce dimensions that differ by one or
+        # two pixels; resize back to GT for fair metric calculation.
         sr = resize_to(sr, gt.size)
         bicubic = lr.resize(gt.size, Image.BICUBIC)
         lr.save(seq_root / "lr" / path.name)
@@ -204,6 +215,11 @@ def process_real_sequence(
     method_dir="basicvsr",
     method_label="BasicVSR",
 ):
+    """Run video SR on real LR frames.
+
+    Wild frames have no GT, so this path produces only frames, videos, and
+    qualitative comparison strips.
+    """
     if max_frames == 0:
         print(f"[skip] {name}: --max-wild-frames 0")
         return
@@ -287,6 +303,8 @@ def main():
         "Vimeo_00018_0043": "data/sample/vimeo-RL/vimeo-RL/00018/0043",
     }
 
+    # Synthetic clips are short enough to run as full sequences. This preserves
+    # BasicVSR's temporal propagation behavior and makes PSNR/SSIM comparable.
     rows = []
     for name, path in synthetic_sequences.items():
         if Path(path).exists():

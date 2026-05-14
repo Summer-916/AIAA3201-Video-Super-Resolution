@@ -24,6 +24,8 @@ from run_part3_adaptive_hybrid import process_sequence as run_hybrid_sequence
 
 
 REDS_ROOT = Path("data/sample/REDS-sample/REDS-sample")
+# Methods are ordered from simple baselines to the Part 3 extension. Keeping a
+# single order here makes CSV rows, plots, figures, and report tables consistent.
 METHOD_ORDER = ["bicubic", "lanczos", "srcnn", "temporal", "real_esrgan", "basicvsrpp", "adaptive_hybrid"]
 METHOD_LABELS = {
     "bicubic": "Bicubic",
@@ -41,6 +43,7 @@ def ensure_dir(path):
 
 
 def list_images(frame_dir):
+    # Full REDS validation frames are PNGs named 00000000.png ... 00000099.png.
     return sorted(p for p in Path(frame_dir).iterdir() if p.suffix.lower() == ".png" and not p.name.startswith("._"))
 
 
@@ -53,6 +56,8 @@ def pil_to_bgr(image):
 
 
 def save_video_from_dir(frame_dir, output_path, fps=24):
+    # This creates a second, centralized video copy under output_root/videos.
+    # Method-specific scripts also save videos inside their own folders.
     frames = [pil_to_bgr(load_rgb(path)) for path in list_images(frame_dir)]
     if not frames:
         return
@@ -64,12 +69,14 @@ def save_video_from_dir(frame_dir, output_path, fps=24):
 
 
 def tensor_for_lpips(image, device):
+    # LPIPS expects tensors in [-1, 1] with channel-first layout.
     arr = np.array(image).astype(np.float32) / 127.5 - 1.0
     tensor = torch.from_numpy(arr).permute(2, 0, 1).unsqueeze(0)
     return tensor.to(device)
 
 
 def calculate_psnr_ssim(gt_dir, pred_dir):
+    """Calculate pixel fidelity metrics for one method/sequence pair."""
     psnr_values, ssim_values = [], []
     for gt_path in list_images(gt_dir):
         pred_path = Path(pred_dir) / gt_path.name
@@ -85,6 +92,13 @@ def calculate_psnr_ssim(gt_dir, pred_dir):
 
 
 def calculate_lpips_and_tlpips(gt_dir, pred_dir, loss_fn, device, max_metric_frames=None):
+    """Calculate LPIPS and a lightweight temporal LPIPS proxy.
+
+    LPIPS compares each restored frame against GT. tLPIPS here is warpless: it
+    compares consecutive-frame perceptual changes in the restored sequence with
+    consecutive-frame changes in GT. It is not a replacement for optical-flow
+    aligned temporal metrics, but it captures extra flicker cheaply.
+    """
     gt_paths = list_images(gt_dir)
     if max_metric_frames:
         gt_paths = gt_paths[:max_metric_frames]
@@ -139,6 +153,9 @@ def calculate_fid(gt_dir, pred_dir, device, max_fid_frames=None):
     if max_fid_frames is None:
         return run_with_retry([str(gt_dir), str(pred_dir)])
 
+    # For long runs, compute FID on a bounded subset to keep runtime manageable.
+    # The copied temporary folders also guarantee that GT and prediction subsets
+    # have matching filenames.
     tmp_root = Path("results/reds_additional/_fid_tmp")
     gt_tmp = tmp_root / "gt"
     pred_tmp = tmp_root / "pred"
@@ -160,6 +177,7 @@ def calculate_fid(gt_dir, pred_dir, device, max_fid_frames=None):
 
 
 def metric_rows_for_sequence(sequence_name, gt_dir, method_dirs, loss_fn, device, max_metric_frames, max_fid_frames):
+    """Create one CSV row per method for a REDS sequence."""
     rows = []
     for method, pred_dir in method_dirs.items():
         psnr_ssim = calculate_psnr_ssim(gt_dir, pred_dir)
@@ -183,6 +201,8 @@ def metric_rows_for_sequence(sequence_name, gt_dir, method_dirs, loss_fn, device
 
 
 def write_metrics(rows, output_path):
+    # Store raw per-sequence results. The report averages are computed from this
+    # table so every number can be traced back to a sequence and method.
     ensure_dir(Path(output_path).parent)
     fields = ["sequence", "method", "method_label", "frames", "psnr", "ssim", "lpips", "fid", "tlpips"]
     with open(output_path, "w", newline="") as f:
@@ -197,6 +217,8 @@ def write_metrics(rows, output_path):
 
 
 def plot_metric(rows, metric, output_path):
+    # One line per sequence shows whether a method is consistently strong or
+    # only performs well on a few clips.
     fig, ax = plt.subplots(figsize=(12, 5.5))
     sequences = sorted(set(row["sequence"] for row in rows))
     xs = np.arange(len(METHOD_ORDER))
@@ -218,6 +240,7 @@ def plot_metric(rows, metric, output_path):
 
 
 def draw_flowchart(output_path):
+    # Simple pipeline diagram required by the qualitative visualization section.
     fig, ax = plt.subplots(figsize=(13, 4.5))
     ax.axis("off")
     boxes = [
@@ -242,6 +265,11 @@ def draw_flowchart(output_path):
 
 
 def make_zoom_patch_figure(sequence_name, gt_dir, method_dirs, output_path, frame_name=None, patch_size=56):
+    """Create zoom-in patch figure around a high-edge region.
+
+    The crop is selected automatically from the GT frame so the figure usually
+    focuses on edges/textures where SR methods differ most visibly.
+    """
     image_names = [p.name for p in list_images(gt_dir)]
     frame_name = frame_name or image_names[len(image_names) // 2]
     gt = load_rgb(Path(gt_dir) / frame_name)
@@ -276,6 +304,7 @@ def make_zoom_patch_figure(sequence_name, gt_dir, method_dirs, output_path, fram
 
 
 def make_rendering_comparison(sequence_name, gt_dir, method_dirs, output_path, frame_name=None):
+    """Create full-frame rendering comparison for qualitative analysis."""
     image_names = [p.name for p in list_images(gt_dir)]
     frame_name = frame_name or image_names[len(image_names) // 2]
     gt = load_rgb(Path(gt_dir) / frame_name)
@@ -300,6 +329,8 @@ def make_rendering_comparison(sequence_name, gt_dir, method_dirs, output_path, f
 
 
 def build_method_dirs(output_root, sequence_name):
+    # Directory contract shared by all sub-pipelines. If a method path changes,
+    # update it here and all metrics/figures will follow.
     return {
         "bicubic": Path(output_root) / "part1" / sequence_name / "bicubic",
         "lanczos": Path(output_root) / "part1" / sequence_name / "lanczos",
@@ -325,10 +356,14 @@ def main():
     reds_root = Path(args.reds_root)
     sequence_ids = args.sequences
     if args.all_sequences:
+        # Full benchmark mode: evaluate every REDS validation sequence folder
+        # under --reds-root, e.g. 000 through 029.
         sequence_ids = sorted(p.name for p in reds_root.iterdir() if p.is_dir())
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+    # Load all reusable models once. This avoids reloading weights for each REDS
+    # sequence and keeps the full validation run practical.
     srcnn = load_srcnn("srcnn_weights.pth", device)
     basicvsrpp = load_basicvsrpp("weights/basicvsr_plusplus_c64n7_8x1_600k_reds4_20210217-db622b2f.pth", device)
     realesrgan = build_upsampler(
@@ -347,6 +382,8 @@ def main():
             print(f"[skip] missing REDS sequence: {gt_dir}")
             continue
 
+        # Part 1, Part 2, and Part 3 are run sequentially for each REDS clip so
+        # downstream steps can consume the just-generated frame folders.
         run_part1_sequence(sequence_name, gt_dir, output_root / "part1", 4, srcnn, device, real_input=False)
         run_realesrgan_sequence(sequence_name, gt_dir, output_root / "part2", 4, realesrgan)
         run_vsr_sequence(
@@ -368,9 +405,12 @@ def main():
         )
 
         method_dirs = build_method_dirs(output_root, sequence_name)
+        # Compute all required metrics after all methods for this sequence exist.
         rows.extend(metric_rows_for_sequence(sequence_name, gt_dir, method_dirs, lpips_loss, device, args.max_metric_frames, args.max_fid_frames))
 
         for method, pred_dir in method_dirs.items():
+            # Centralized videos make it easier to package one folder for demo
+            # review, while original per-method videos remain in each part.
             save_video_from_dir(pred_dir, output_root / "videos" / sequence_name / f"{method}.mp4")
 
         make_rendering_comparison(sequence_name, gt_dir, method_dirs, output_root / "figures" / f"{sequence_name}_rendering_comparison.png")

@@ -21,6 +21,11 @@ IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp"}
 
 
 def list_images(frame_dir):
+    """Return valid image frames in temporal order.
+
+    REDS/Vimeo frame names sort lexicographically in the same order as time.
+    Hidden macOS resource-fork files are ignored because they are not images.
+    """
     return sorted(
         p for p in Path(frame_dir).iterdir()
         if p.is_file() and p.suffix.lower() in IMAGE_EXTS and not p.name.startswith("._")
@@ -48,8 +53,9 @@ def resize_pil(image, size, resample):
 
 
 def make_lr_and_reference(image, scale, real_input):
-    # Synthetic datasets have HR ground truth, so we create LR inputs by downsampling.
-    # Wild frames are already treated as real LR inputs and have no GT reference.
+    # Synthetic datasets have HR ground truth, so we create LR inputs by
+    # downsampling and keep the original HR frame as reference. Wild frames are
+    # already treated as real LR inputs and have no GT reference.
     if real_input:
         return image, None
     lr_size = (max(1, image.width // scale), max(1, image.height // scale))
@@ -58,12 +64,15 @@ def make_lr_and_reference(image, scale, real_input):
 
 
 def upscale_lr(lr_image, scale, target_size=None, method=Image.BICUBIC):
+    # target_size is used on synthetic datasets to exactly match GT dimensions.
+    # For real LR input, the requested scale determines the output size.
     size = target_size or (lr_image.width * scale, lr_image.height * scale)
     return resize_pil(lr_image, size, method)
 
 
 def run_srcnn(model, device, image):
-    # SRCNN expects a bicubic-upsampled image and predicts a sharpened HR image.
+    # SRCNN expects a bicubic-upsampled image and predicts a refined HR image.
+    # It is frame-independent and therefore cannot use temporal information.
     tensor = transforms.ToTensor()(image).unsqueeze(0).to(device)
     with torch.no_grad():
         output = model(tensor).clamp(0.0, 1.0)
@@ -79,6 +88,8 @@ def temporal_average(frames, radius=1, weights=None):
 
     output = []
     for idx in range(len(frames)):
+        # Boundary frames reuse the nearest valid neighbor. This keeps the
+        # output length identical to the input length.
         acc = np.zeros_like(frames[idx], dtype=np.float32)
         norm = 0.0
         for offset in range(-radius, radius + 1):
@@ -91,12 +102,16 @@ def temporal_average(frames, radius=1, weights=None):
 
 
 def unsharp_mask_bgr(image, amount=0.65, sigma=1.0):
+    # Temporal averaging can look overly smooth. A mild unsharp mask makes this
+    # baseline easier to inspect without introducing another learned model.
     blurred = cv2.GaussianBlur(image, (0, 0), sigma)
     sharpened = cv2.addWeighted(image, 1.0 + amount, blurred, -amount, 0)
     return np.clip(sharpened, 0, 255).astype(np.uint8)
 
 
 def save_video(frames, output_path, fps=24):
+    # MP4 outputs are for quick viewing and submission. PNG frames are kept as
+    # the preferred source for report figures because they avoid compression.
     if not frames:
         return
     h, w = frames[0].shape[:2]
@@ -128,6 +143,8 @@ def calculate_metrics(gt_dir, pred_dir):
     psnr_values = []
     ssim_values = []
     for gt_path in gt_files:
+        # Compare only matching frame names with identical shapes. This prevents
+        # accidental metrics on real-input outputs or incomplete folders.
         pred_path = pred_dir / gt_path.name
         if not pred_path.exists():
             continue
@@ -147,6 +164,8 @@ def calculate_metrics(gt_dir, pred_dir):
 
 
 def load_srcnn(weights_path, device):
+    # If weights are missing, Part 1 still produces the classical baselines; the
+    # SRCNN branch falls back to bicubic output rather than stopping the script.
     model = SRCNN().to(device)
     if not Path(weights_path).exists():
         print(f"[warn] SRCNN weights not found: {weights_path}. Skipping SRCNN output.")
@@ -157,6 +176,12 @@ def load_srcnn(weights_path, device):
 
 
 def process_sequence(name, input_dir, output_root, scale, model, device, real_input, max_frames=None):
+    """Run all Part 1 baselines on one sequence.
+
+    Synthetic sequences are degraded from HR to LR inside this function and can
+    be scored with PSNR/SSIM. Real sequences are upscaled directly and are used
+    only for qualitative figures/videos.
+    """
     image_paths = list_images(input_dir)
     if max_frames:
         image_paths = image_paths[:max_frames]
@@ -180,7 +205,8 @@ def process_sequence(name, input_dir, output_root, scale, model, device, real_in
         lr, reference = make_lr_and_reference(frame, scale=scale, real_input=real_input)
         target_size = None if real_input else reference.size
 
-        # Part 1 compares classical interpolation, shallow CNN SR, and temporal fusion.
+        # Part 1 compares classical interpolation, shallow CNN SR, and temporal
+        # fusion under the same LR input.
         bicubic = upscale_lr(lr, scale=scale, target_size=target_size, method=Image.BICUBIC)
         lanczos = upscale_lr(lr, scale=scale, target_size=target_size, method=Image.LANCZOS)
         srcnn = run_srcnn(model, device, bicubic) if model is not None else bicubic
@@ -204,6 +230,8 @@ def process_sequence(name, input_dir, output_root, scale, model, device, real_in
 
     sample_indices = sorted(set([0, len(image_paths) // 2, len(image_paths) - 1]))
     for idx in sample_indices:
+        # Save first/middle/last strips so the report can show both early and
+        # later motion/texture behavior without including every frame.
         path = image_paths[idx]
         tiles = [
             upscale_lr(lr_frames[idx], scale=scale, target_size=(bicubic_bgr_frames[idx].shape[1], bicubic_bgr_frames[idx].shape[0])),
@@ -237,6 +265,7 @@ def process_sequence(name, input_dir, output_root, scale, model, device, real_in
 
 
 def write_metrics(metrics, output_path):
+    # Simple CSV output makes manual checking and report table creation easy.
     ensure_dir(Path(output_path).parent)
     with open(output_path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=["sequence", "method", "frames", "psnr", "ssim"])
