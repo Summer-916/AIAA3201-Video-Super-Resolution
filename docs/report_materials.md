@@ -596,3 +596,126 @@ Interpretation:
 - Adaptive Hybrid is very close to BasicVSR++ on PSNR/SSIM, slightly improves average FID, and offers a reportable trade-off between fidelity and perceptual detail.
 - Real-ESRGAN has much better LPIPS than classical baselines, but lower PSNR/SSIM because GAN-style texture hallucination changes pixels relative to GT.
 - The reported tLPIPS is a warpless temporal LPIPS proxy: it compares consecutive-frame perceptual changes in the restored video with consecutive-frame changes in GT. Lower is better.
+
+## Full REDS Validation Benchmark
+
+This section is separate from the earlier three-sequence REDS additional experiment so it can be inserted into the report without disturbing the existing draft.
+
+Dataset: full REDS validation split, `REDS_000` through `REDS_029`, 30 sequences total and 100 frames per sequence. The experiment uses REDS validation GT frames from:
+
+```text
+data/benchmark/REDS/val/val_sharp/
+```
+
+For each sequence, the pipeline creates synthetic x4 low-resolution inputs from the GT frames, then evaluates all implemented methods:
+
+- Part 1: Bicubic, Lanczos, SRCNN, Temporal Average
+- Part 2: Real-ESRGAN, BasicVSR++
+- Part 3: Adaptive Hybrid
+
+Command used:
+
+```bash
+python -u scripts/run_reds_additional_experiment.py \
+  --reds-root data/benchmark/REDS/val/val_sharp \
+  --all-sequences \
+  --output results/reds_benchmark_val \
+  --max-metric-frames 30 \
+  --max-fid-frames 50
+```
+
+Main output directory:
+
+```text
+results/reds_benchmark_val/
+```
+
+Main quantitative table:
+
+```text
+results/reds_benchmark_val/tables/reds_additional_metrics.csv
+```
+
+The table contains 210 rows, corresponding to 30 sequences x 7 methods.
+
+Average over all 30 REDS validation sequences:
+
+| Method | PSNR | SSIM | LPIPS | FID | tLPIPS |
+|---|---:|---:|---:|---:|---:|
+| BasicVSR++ | 31.7750 | 0.901598 | 0.156181 | 14.1000 | 0.012558 |
+| Adaptive Hybrid | 31.6592 | 0.898746 | 0.155519 | 15.5069 | 0.013661 |
+| Lanczos | 26.5026 | 0.741679 | 0.485979 | 73.8822 | 0.028244 |
+| Bicubic | 26.2932 | 0.733447 | 0.477673 | 74.6166 | 0.028566 |
+| SRCNN | 25.0887 | 0.725723 | 0.517347 | 88.2411 | 0.024511 |
+| Real-ESRGAN | 24.3263 | 0.691159 | 0.225280 | 71.6246 | 0.009300 |
+| Temporal Avg. | 23.1535 | 0.637528 | 0.530395 | 131.0968 | 0.085997 |
+
+Recommended quantitative figures:
+
+```text
+results/reds_benchmark_val/figures/reds_additional_psnr.png
+results/reds_benchmark_val/figures/reds_additional_ssim.png
+results/reds_benchmark_val/figures/reds_additional_lpips.png
+results/reds_benchmark_val/figures/reds_additional_fid.png
+results/reds_benchmark_val/figures/reds_additional_tlpips.png
+```
+
+Recommended qualitative figures:
+
+```text
+results/reds_benchmark_val/figures/pipeline_flowchart.png
+results/reds_benchmark_val/figures/REDS_000_rendering_comparison.png
+results/reds_benchmark_val/figures/REDS_000_zoom_patches.png
+results/reds_benchmark_val/figures/REDS_007_rendering_comparison.png
+results/reds_benchmark_val/figures/REDS_007_zoom_patches.png
+results/reds_benchmark_val/figures/REDS_029_rendering_comparison.png
+results/reds_benchmark_val/figures/REDS_029_zoom_patches.png
+```
+
+Processed video files:
+
+```text
+results/reds_benchmark_val/part1/<sequence>/videos/bicubic.mp4
+results/reds_benchmark_val/part1/<sequence>/videos/lanczos.mp4
+results/reds_benchmark_val/part1/<sequence>/videos/srcnn.mp4
+results/reds_benchmark_val/part1/<sequence>/videos/temporal.mp4
+results/reds_benchmark_val/part2/real_esrgan/<sequence>/videos/real_esrgan.mp4
+results/reds_benchmark_val/part2/basicvsrpp/<sequence>/videos/basicvsrpp.mp4
+results/reds_benchmark_val/part3/<sequence>/videos/adaptive_hybrid.mp4
+```
+
+There are 210 REDS validation processed videos in total, one for each method and sequence pair.
+
+### How to Present the Full REDS Benchmark
+
+Use the average metric table as the main quantitative evidence for the additional standard benchmark. This directly addresses the requirement to report experimental results on an additional academic dataset with GT.
+
+Recommended report placement:
+
+- Dataset paragraph: mention full REDS validation split with 30 sequences and GT frames.
+- Quantitative results table: include PSNR, SSIM, LPIPS, FID, and tLPIPS averages.
+- Metric plots: include one compact plot group or select PSNR/SSIM and LPIPS/tLPIPS for the main paper.
+- Qualitative analysis: include one rendering comparison and one zoom-in patch figure.
+- Supplementary/demo files: include the processed videos listed above.
+
+Suggested table caption:
+
+> Full REDS validation benchmark over 30 sequences. BasicVSR++ achieves the best distortion-oriented fidelity on PSNR and SSIM, while Real-ESRGAN improves perceptual LPIPS and temporal LPIPS at the cost of lower pixel fidelity. The proposed Adaptive Hybrid remains close to BasicVSR++ while slightly improving LPIPS.
+
+Suggested figure caption for rendering comparisons:
+
+> Qualitative comparison on REDS validation. Classical interpolation methods are stable but blurry, SRCNN remains limited by shallow reconstruction, Real-ESRGAN introduces sharper perceptual texture, and BasicVSR++ gives the strongest GT-aligned reconstruction. The adaptive hybrid selectively incorporates perceptual details while preserving most BasicVSR++ structure.
+
+Suggested figure caption for zoom-in patches:
+
+> Zoom-in patches highlight differences in local texture recovery and edge sharpness. BasicVSR++ preserves structure with high fidelity, while Real-ESRGAN may produce sharper but less GT-aligned details. The adaptive hybrid illustrates the trade-off between perceptual sharpness and distortion metrics.
+
+### Full REDS Interpretation
+
+BasicVSR++ is the strongest method for PSNR and SSIM on the full REDS validation benchmark. This supports the conclusion that temporal propagation and alignment are important for GT-aligned video super-resolution.
+
+Adaptive Hybrid is very close to BasicVSR++ in PSNR/SSIM and has slightly lower LPIPS. This makes it useful for the Part 3 discussion: it does not beat BasicVSR++ on every metric, but it demonstrates a lightweight fusion strategy that explores the distortion-perception trade-off without additional training.
+
+Real-ESRGAN has much lower PSNR/SSIM but substantially better LPIPS and tLPIPS than classical baselines. This is expected for a perceptual/GAN restoration model: generated textures can look sharper while differing from the exact GT pixels.
+
+The temporal average baseline performs worst on temporal consistency because it averages unaligned frames. This is an important failure case to mention because it motivates motion-aware video SR methods.
