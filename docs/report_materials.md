@@ -509,9 +509,17 @@ This makes Part 3 a low-risk extension: it demonstrates an uncertainty-aware ref
 7. Conclusion
    - Summarize completed pipeline, limitations, and future improvements.
 
+## Current Limitations to Mention
+
+- The SRCNN model is shallow and trained only lightly.
+- The temporal average baseline does not include motion alignment.
+- Wild-video evaluation lacks ground truth, so it must be judged qualitatively.
+- PSNR/SSIM may not fully reflect perceptual quality.
+   - Part 2 and Part 3 results should include visual analysis, not just metrics.
+
 ## Metric Line Charts
 
-A plotting script has been added to generate intuitive metric trend figures across all implemented methods:
+A plotting script generates intuitive metric trend figures across all implemented methods:
 
 ```bash
 python scripts/plot_metrics.py
@@ -526,22 +534,65 @@ results/figures/ssim_line_comparison.png
 results/figures/metric_line_comparison.png
 ```
 
-Recommended report figure:
-
-```text
-results/figures/metric_line_comparison.png
-```
+Recommended report figure: `results/figures/metric_line_comparison.png`.
 
 Suggested caption:
 
-> PSNR and SSIM trends across all implemented methods. Classical baselines are stable but limited, BasicVSR and BasicVSR++ significantly improve distortion metrics through temporal propagation, Real-ESRGAN trades pixel fidelity for perceptual detail, and the adaptive hybrid remains close to BasicVSR++ while incorporating controlled perceptual enhancement.
+> PSNR and SSIM trends across implemented VSR methods. Classical baselines are stable but limited, BasicVSR/BasicVSR++ improve distortion metrics through temporal propagation, Real-ESRGAN trades pixel fidelity for perceptual detail, and the adaptive hybrid remains close to BasicVSR++ while incorporating controlled perceptual enhancement.
 
-Use `psnr_line_comparison.png` or `ssim_line_comparison.png` if the report needs separate single-metric plots.
+## Additional REDS Evaluation
 
-## Current Limitations to Mention
+Dataset: three additional REDS sample clips, `REDS_007`, `REDS_010`, and `REDS_012`, each with 100 frames. The experiment creates synthetic x4 LR inputs from HR REDS frames, then runs Part 1 baselines, Part 2 Real-ESRGAN and BasicVSR++, and Part 3 adaptive hybrid fusion.
 
-- The SRCNN model is shallow and trained only lightly.
-- The temporal average baseline does not include motion alignment.
-- Wild-video evaluation lacks ground truth, so it must be judged qualitatively.
-- PSNR/SSIM may not fully reflect perceptual quality.
-- Part 2 and Part 3 results should include visual analysis, not just metrics.
+Command:
+
+```bash
+python scripts/run_reds_additional_experiment.py --sequences 007 010 012 --max-metric-frames 30 --max-fid-frames 50
+```
+
+Main quantitative table:
+
+```text
+results/reds_additional/tables/reds_additional_metrics.csv
+```
+
+Average over `REDS_007`, `REDS_010`, and `REDS_012`:
+
+| Method | PSNR | SSIM | LPIPS | FID | tLPIPS |
+|---|---:|---:|---:|---:|---:|
+| BasicVSR++ | 28.9653 | 0.887440 | 0.144580 | 127.5387 | 0.004899 |
+| Adaptive Hybrid | 28.8943 | 0.884806 | 0.144591 | 125.3311 | 0.005136 |
+| Lanczos | 24.2426 | 0.707970 | 0.508716 | 234.4695 | 0.018727 |
+| Bicubic | 24.0223 | 0.697719 | 0.496769 | 254.9038 | 0.019029 |
+| Temporal Avg. | 22.4859 | 0.620048 | 0.543455 | 276.9944 | 0.036659 |
+| Real-ESRGAN | 22.2057 | 0.643936 | 0.187831 | 156.0711 | 0.022322 |
+| SRCNN | 22.1047 | 0.678610 | 0.560812 | 275.4520 | 0.008223 |
+
+Figures to include:
+
+```text
+results/reds_additional/figures/pipeline_flowchart.png
+results/reds_additional/figures/REDS_007_rendering_comparison.png
+results/reds_additional/figures/REDS_007_zoom_patches.png
+results/reds_additional/figures/reds_additional_psnr.png
+results/reds_additional/figures/reds_additional_ssim.png
+results/reds_additional/figures/reds_additional_lpips.png
+results/reds_additional/figures/reds_additional_fid.png
+results/reds_additional/figures/reds_additional_tlpips.png
+```
+
+Processed video files:
+
+```text
+results/reds_additional/part1/<sequence>/videos/*.mp4
+results/reds_additional/part2/real_esrgan/<sequence>/videos/real_esrgan.mp4
+results/reds_additional/part2/basicvsrpp/<sequence>/videos/basicvsrpp.mp4
+results/reds_additional/part3/<sequence>/videos/adaptive_hybrid.mp4
+```
+
+Interpretation:
+
+- BasicVSR++ remains the strongest distortion-oriented method on PSNR/SSIM and tLPIPS.
+- Adaptive Hybrid is very close to BasicVSR++ on PSNR/SSIM, slightly improves average FID, and offers a reportable trade-off between fidelity and perceptual detail.
+- Real-ESRGAN has much better LPIPS than classical baselines, but lower PSNR/SSIM because GAN-style texture hallucination changes pixels relative to GT.
+- The reported tLPIPS is a warpless temporal LPIPS proxy: it compares consecutive-frame perceptual changes in the restored video with consecutive-frame changes in GT. Lower is better.

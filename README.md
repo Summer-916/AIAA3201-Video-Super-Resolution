@@ -209,7 +209,7 @@ The hybrid result stays close to BasicVSR++ under PSNR/SSIM while selectively bl
 
 ## Plot Metrics
 
-Generate report-ready line charts for PSNR and SSIM across all implemented methods:
+Generate report-ready line charts for PSNR and SSIM across all implemented Part 1/2/3 methods:
 
 ```bash
 python scripts/plot_metrics.py
@@ -224,7 +224,42 @@ results/figures/ssim_line_comparison.png
 results/figures/metric_line_comparison.png
 ```
 
-Use `metric_line_comparison.png` as the main report figure for intuitive comparison across Part 1, Part 2, and Part 3 methods.
+## REDS Additional Experiment
+
+The additional REDS evaluation uses three extra REDS sample clips (`007`, `010`, `012`) and reports PSNR, SSIM, LPIPS, FID, and tLPIPS, plus qualitative figures and processed videos.
+
+```bash
+python scripts/run_reds_additional_experiment.py --sequences 007 010 012 --max-metric-frames 30 --max-fid-frames 50
+```
+
+Outputs:
+
+```text
+results/reds_additional/tables/reds_additional_metrics.csv
+results/reds_additional/figures/pipeline_flowchart.png
+results/reds_additional/figures/REDS_007_rendering_comparison.png
+results/reds_additional/figures/REDS_007_zoom_patches.png
+results/reds_additional/figures/reds_additional_psnr.png
+results/reds_additional/figures/reds_additional_ssim.png
+results/reds_additional/figures/reds_additional_lpips.png
+results/reds_additional/figures/reds_additional_fid.png
+results/reds_additional/figures/reds_additional_tlpips.png
+results/reds_additional/part*/**/videos/*.mp4
+```
+
+Average additional REDS results across clips 007/010/012:
+
+| Method | PSNR | SSIM | LPIPS | FID | tLPIPS |
+|---|---:|---:|---:|---:|---:|
+| BasicVSR++ | 28.9653 | 0.887440 | 0.144580 | 127.5387 | 0.004899 |
+| Adaptive Hybrid | 28.8943 | 0.884806 | 0.144591 | 125.3311 | 0.005136 |
+| Lanczos | 24.2426 | 0.707970 | 0.508716 | 234.4695 | 0.018727 |
+| Bicubic | 24.0223 | 0.697719 | 0.496769 | 254.9038 | 0.019029 |
+| Temporal Avg. | 22.4859 | 0.620048 | 0.543455 | 276.9944 | 0.036659 |
+| Real-ESRGAN | 22.2057 | 0.643936 | 0.187831 | 156.0711 | 0.022322 |
+| SRCNN | 22.1047 | 0.678610 | 0.560812 | 275.4520 | 0.008223 |
+
+For the full official REDS dataset, download `train_sharp`/`val_sharp` and optional `train_sharp_bicubic`/`val_sharp_bicubic` from the REDS page, then arrange clips under `data/REDS` following the MMagic layout. This project script currently expects selected HR clip folders under `data/sample/REDS-sample/REDS-sample/<clip_id>` and creates synthetic x4 LR frames internally.
 
 ## Train SRCNN
 
