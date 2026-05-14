@@ -269,6 +269,19 @@ python scripts/download_reds_benchmark.py --root data/benchmark/REDS --proxy htt
 
 The downloader uses Google Drive IDs from the official REDS page, resumes partial files with `gdown --continue`, and extracts each archive after it finishes. It downloads validation files first so the full validation benchmark becomes available before the large training HR archive completes.
 
+After `val_sharp.zip` is extracted, run the full REDS validation benchmark with:
+
+```bash
+python scripts/run_reds_additional_experiment.py \
+  --reds-root data/benchmark/REDS/val/val_sharp \
+  --all-sequences \
+  --output results/reds_benchmark_val \
+  --max-metric-frames 30 \
+  --max-fid-frames 50
+```
+
+This runs the same Part 1/2/3 pipeline on every validation clip and writes tables, metric figures, rendering comparisons, zoom-in patches, and mp4 outputs under `results/reds_benchmark_val`.
+
 ## Train SRCNN
 
 ```bash

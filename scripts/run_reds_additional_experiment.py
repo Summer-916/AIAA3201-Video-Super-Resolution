@@ -314,12 +314,19 @@ def build_method_dirs(output_root, sequence_name):
 def main():
     parser = argparse.ArgumentParser(description="Run additional REDS experiments and report visualizations.")
     parser.add_argument("--sequences", nargs="+", default=["007", "010", "012"])
+    parser.add_argument("--all-sequences", action="store_true", help="Evaluate every sequence folder under --reds-root.")
+    parser.add_argument("--reds-root", default=str(REDS_ROOT), help="Directory containing REDS HR sequence folders.")
     parser.add_argument("--output", default="results/reds_additional")
     parser.add_argument("--max-metric-frames", type=int, default=30)
     parser.add_argument("--max-fid-frames", type=int, default=50)
     args = parser.parse_args()
 
     output_root = Path(args.output)
+    reds_root = Path(args.reds_root)
+    sequence_ids = args.sequences
+    if args.all_sequences:
+        sequence_ids = sorted(p.name for p in reds_root.iterdir() if p.is_dir())
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     srcnn = load_srcnn("srcnn_weights.pth", device)
@@ -333,9 +340,9 @@ def main():
     lpips_loss = lpips.LPIPS(net="alex").to(device).eval()
 
     rows = []
-    for seq in args.sequences:
+    for seq in sequence_ids:
         sequence_name = f"REDS_{seq}"
-        gt_dir = REDS_ROOT / seq
+        gt_dir = reds_root / seq
         if not gt_dir.exists():
             print(f"[skip] missing REDS sequence: {gt_dir}")
             continue
