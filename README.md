@@ -207,6 +207,25 @@ Current Part 3 sample metrics:
 
 The hybrid result stays close to BasicVSR++ under PSNR/SSIM while selectively blending Real-ESRGAN details through an adaptive mask.
 
+## Plot Metrics
+
+Generate report-ready line charts for PSNR and SSIM across all implemented methods:
+
+```bash
+python scripts/plot_metrics.py
+```
+
+Outputs:
+
+```text
+results/figures/metrics_all_methods.csv
+results/figures/psnr_line_comparison.png
+results/figures/ssim_line_comparison.png
+results/figures/metric_line_comparison.png
+```
+
+Use `metric_line_comparison.png` as the main report figure for intuitive comparison across Part 1, Part 2, and Part 3 methods.
+
 ## Train SRCNN
 
 ```bash

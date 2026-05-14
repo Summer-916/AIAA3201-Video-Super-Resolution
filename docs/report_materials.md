@@ -509,6 +509,35 @@ This makes Part 3 a low-risk extension: it demonstrates an uncertainty-aware ref
 7. Conclusion
    - Summarize completed pipeline, limitations, and future improvements.
 
+## Metric Line Charts
+
+A plotting script has been added to generate intuitive metric trend figures across all implemented methods:
+
+```bash
+python scripts/plot_metrics.py
+```
+
+Generated files:
+
+```text
+results/figures/metrics_all_methods.csv
+results/figures/psnr_line_comparison.png
+results/figures/ssim_line_comparison.png
+results/figures/metric_line_comparison.png
+```
+
+Recommended report figure:
+
+```text
+results/figures/metric_line_comparison.png
+```
+
+Suggested caption:
+
+> PSNR and SSIM trends across all implemented methods. Classical baselines are stable but limited, BasicVSR and BasicVSR++ significantly improve distortion metrics through temporal propagation, Real-ESRGAN trades pixel fidelity for perceptual detail, and the adaptive hybrid remains close to BasicVSR++ while incorporating controlled perceptual enhancement.
+
+Use `psnr_line_comparison.png` or `ssim_line_comparison.png` if the report needs separate single-metric plots.
+
 ## Current Limitations to Mention
 
 - The SRCNN model is shallow and trained only lightly.
