@@ -261,6 +261,14 @@ Average additional REDS results across clips 007/010/012:
 
 For the full official REDS dataset, download `train_sharp`/`val_sharp` and optional `train_sharp_bicubic`/`val_sharp_bicubic` from the REDS page, then arrange clips under `data/REDS` following the MMagic layout. This project script currently expects selected HR clip folders under `data/sample/REDS-sample/REDS-sample/<clip_id>` and creates synthetic x4 LR frames internally.
 
+To download the public REDS VSR benchmark into `data/benchmark/REDS`, use:
+
+```bash
+python scripts/download_reds_benchmark.py --root data/benchmark/REDS --proxy http://127.0.0.1:18080
+```
+
+The downloader uses Google Drive IDs from the official REDS page, resumes partial files with `gdown --continue`, and extracts each archive after it finishes. It downloads validation files first so the full validation benchmark becomes available before the large training HR archive completes.
+
 ## Train SRCNN
 
 ```bash
