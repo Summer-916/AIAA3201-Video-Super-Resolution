@@ -76,8 +76,9 @@ def main():
     parser.add_argument("--output", default="results/part2")
     parser.add_argument("--scale", type=int, default=4)
     parser.add_argument("--max-sample-frames", type=int, default=None)
-    parser.add_argument("--max-wild-frames", type=int, default=6)
+    parser.add_argument("--max-wild-frames", type=int, default=80)
     parser.add_argument("--wild-input-resize", type=float, default=0.5)
+    parser.add_argument("--wild-chunk-frames", type=int, default=20)
     args = parser.parse_args()
 
     weights_path = Path(args.weights)
@@ -128,6 +129,7 @@ def main():
             args.wild_input_resize,
             method_dir="basicvsrpp",
             method_label="BasicVSR++",
+            chunk_frames=args.wild_chunk_frames,
         )
 
     metrics_path = Path(args.output) / "metrics_basicvsrpp.csv"

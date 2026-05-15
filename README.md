@@ -135,19 +135,19 @@ weights/basicvsr_plusplus_c64n7_8x1_600k_reds4_20210217-db622b2f.pth
 Run the pretrained Real-ESRGAN reproduction:
 
 ```bash
-python scripts/run_part2_realesrgan.py --max-wild-frames 12
+python scripts/run_part2_realesrgan.py --max-wild-frames 80
 ```
 
 Run BasicVSR:
 
 ```bash
-python scripts/run_part2_basicvsr.py --max-wild-frames 6
+python scripts/run_part2_basicvsr.py --max-wild-frames 80
 ```
 
 Run BasicVSR++:
 
 ```bash
-python scripts/run_part2_basicvsrpp.py --max-wild-frames 6
+python scripts/run_part2_basicvsrpp.py --max-wild-frames 80 --wild-chunk-frames 20
 ```
 
 Outputs:
@@ -186,7 +186,7 @@ BasicVSR++ is the strongest quantitative method. Real-ESRGAN is perceptually sha
 Run adaptive hybrid refinement:
 
 ```bash
-python scripts/run_part3_adaptive_hybrid.py --max-wild-frames 6
+python scripts/run_part3_adaptive_hybrid.py --max-wild-frames 80
 ```
 
 Outputs:

@@ -242,7 +242,7 @@ def main():
     parser.add_argument("--scale", type=int, default=4)
     parser.add_argument("--real-scale", type=int, default=2)
     parser.add_argument("--tile", type=int, default=256)
-    parser.add_argument("--max-wild-frames", type=int, default=12)
+    parser.add_argument("--max-wild-frames", type=int, default=80)
     parser.add_argument("--max-sample-frames", type=int, default=None)
     parser.add_argument("--fp32", action="store_true")
     args = parser.parse_args()

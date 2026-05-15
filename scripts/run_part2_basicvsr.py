@@ -144,6 +144,20 @@ def run_model(model, lr_images, device):
     return [tensor_to_pil(frame) for frame in output]
 
 
+def run_model_chunked(model, lr_images, device, chunk_frames=None):
+    """Run long real videos in smaller temporal chunks to reduce peak VRAM."""
+    if not chunk_frames or chunk_frames <= 0 or chunk_frames >= len(lr_images):
+        return run_model(model, lr_images, device)
+
+    sr_images = []
+    for start in range(0, len(lr_images), chunk_frames):
+        chunk = lr_images[start:start + chunk_frames]
+        sr_images.extend(run_model(model, chunk, device))
+        if device.type == "cuda":
+            torch.cuda.empty_cache()
+    return sr_images
+
+
 def process_synthetic_sequence(
     name,
     input_dir,
@@ -214,6 +228,7 @@ def process_real_sequence(
     input_resize,
     method_dir="basicvsr",
     method_label="BasicVSR",
+    chunk_frames=None,
 ):
     """Run video SR on real LR frames.
 
@@ -244,7 +259,7 @@ def process_real_sequence(
         lr_images.append(image)
 
     print(f"[run] {method_label} real {name}: {len(paths)} frames, input size={lr_images[0].size}")
-    sr_images = run_model(model, lr_images, device)
+    sr_images = run_model_chunked(model, lr_images, device, chunk_frames)
 
     video_frames = []
     for path, lr, sr in zip(paths, lr_images, sr_images):
@@ -285,7 +300,7 @@ def main():
     parser.add_argument("--output", default="results/part2")
     parser.add_argument("--scale", type=int, default=4)
     parser.add_argument("--max-sample-frames", type=int, default=None)
-    parser.add_argument("--max-wild-frames", type=int, default=6)
+    parser.add_argument("--max-wild-frames", type=int, default=80)
     parser.add_argument("--wild-input-resize", type=float, default=0.5)
     parser.add_argument("--num-block", type=int, default=30)
     args = parser.parse_args()
