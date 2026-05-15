@@ -40,9 +40,10 @@ M_t = \mathrm{clip}\left(w_0 + 0.35E_t - 0.45D_t - 0.25T_t, 0, w_{\max}\right),
 \end{equation}
 where $w_0=0.18$ and $w_{\max}=0.65$ in our experiments. This design keeps BasicVSR++ dominant while allowing Real-ESRGAN to contribute mainly in relatively reliable textured areas.
 
-\begin{figure*}[t]
+\begin{figure}[!htbp]
   \centering
-  \includegraphics[width=0.85\textwidth]{pipeline_flowchart.png}
+  \includegraphics[width=\linewidth]{pipeline_flowchart.png}
   \caption{Overall experimental pipeline. HR frames are synthetically degraded to x4 LR inputs, processed by Part~1 baselines, Part~2 pretrained methods, and Part~3 adaptive fusion, then evaluated with pixel, perceptual, temporal, and qualitative metrics.}
   \label{fig:pipeline}
-\end{figure*}
+\end{figure}
+\FloatBarrier
