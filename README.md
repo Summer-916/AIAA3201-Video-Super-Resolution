@@ -259,7 +259,7 @@ Average additional REDS results across clips 007/010/012:
 | Real-ESRGAN | 22.2057 | 0.643936 | 0.187831 | 156.0711 | 0.022322 |
 | SRCNN | 22.1047 | 0.678610 | 0.560812 | 275.4520 | 0.008223 |
 
-For the full official REDS dataset, download `train_sharp`/`val_sharp` and optional `train_sharp_bicubic`/`val_sharp_bicubic` from the REDS page, then arrange clips under `data/REDS` following the MMagic layout. This project script currently expects selected HR clip folders under `data/sample/REDS-sample/REDS-sample/<clip_id>` and creates synthetic x4 LR frames internally.
+For the full official REDS validation benchmark, download and extract REDS into `data/benchmark/REDS`. The benchmark script expects HR validation clips under `data/benchmark/REDS/val/val_sharp/<clip_id>` and creates synthetic x4 LR frames internally.
 
 To download the public REDS VSR benchmark into `data/benchmark/REDS`, use:
 
@@ -292,4 +292,4 @@ The default training script uses `data/sample/REDS-sample/REDS-sample/002` and s
 
 ## Repository Notes
 
-`data/` and `results/` are ignored by Git because they contain datasets and generated outputs. Keep selected figures, tables, and videos separately when preparing the final report submission.
+`data/` and `results/` are ignored by Git because they contain datasets and generated outputs. Re-run the pipeline commands above to regenerate outputs locally.
