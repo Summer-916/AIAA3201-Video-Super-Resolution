@@ -1,0 +1,104 @@
+\section{Experiments}
+\subsection{Datasets}
+\textbf{Mandatory sample data.}
+We use the provided REDS-sample clip \texttt{REDS\_002} with 100 frames and the Vimeo clip \texttt{00018/0043} with 7 frames. For both datasets, HR frames are downsampled by x4 to create synthetic LR inputs, so GT is available for PSNR and SSIM.
+
+\textbf{Wild video.}
+We also process a real LR wild video extracted into frame images. Since no GT is available, this dataset is used for qualitative comparison and processed video submission only.
+
+\textbf{Full REDS validation benchmark.}
+For stronger evaluation, we run the full REDS validation split, \texttt{REDS\_000} through \texttt{REDS\_029}, with 30 sequences and 100 frames per sequence. Each sequence is evaluated with seven methods: Bicubic, Lanczos, SRCNN, Temporal Average, Real-ESRGAN, BasicVSR++, and Adaptive Hybrid. This produces 210 processed videos.
+
+\subsection{Metrics}
+We report PSNR and SSIM for pixel fidelity. LPIPS measures perceptual similarity using deep features. FID is computed between restored and GT frame distributions as a supplementary perceptual indicator. For temporal consistency, we compute a warpless tLPIPS proxy: the absolute difference between consecutive-frame LPIPS changes in restored frames and GT frames. Lower LPIPS, FID, and tLPIPS are better.
+
+\subsection{Part 1 and Part 2 Sample Results}
+Table~\ref{tab:sample} summarizes the mandatory sample quantitative results. On REDS\_002, Lanczos slightly improves over Bicubic among classical baselines. SRCNN underperforms interpolation in this run, likely because the provided weights are limited. Temporal averaging performs poorly on REDS because neighboring frames are not aligned before averaging. BasicVSR and BasicVSR++ substantially improve PSNR/SSIM, confirming the value of temporal propagation and alignment. Real-ESRGAN has lower PSNR/SSIM because perceptual textures do not necessarily match GT pixels.
+
+\begin{table*}[t]
+\centering
+\small
+\caption{Sample-dataset PSNR/SSIM results. Higher is better.}
+\label{tab:sample}
+\begin{tabular}{llccc}
+\toprule
+Dataset & Method & Frames & PSNR & SSIM \\
+\midrule
+\multirow{7}{*}{REDS\_002}
+& Bicubic & 100 & 21.6300 & 0.675386 \\
+& Lanczos & 100 & 21.8382 & 0.687649 \\
+& SRCNN & 100 & 20.5023 & 0.652510 \\
+& Temporal Avg. & 100 & 20.3740 & 0.595532 \\
+& Real-ESRGAN & 100 & 19.8416 & 0.632718 \\
+& BasicVSR & 100 & 26.1518 & 0.883018 \\
+& BasicVSR++ & 100 & 26.8504 & 0.900157 \\
+\midrule
+\multirow{7}{*}{Vimeo}
+& Bicubic & 7 & 27.5722 & 0.751740 \\
+& Lanczos & 7 & 27.7183 & 0.759160 \\
+& SRCNN & 7 & 24.2808 & 0.690225 \\
+& Temporal Avg. & 7 & 27.6853 & 0.758837 \\
+& Real-ESRGAN & 7 & 24.9929 & 0.667951 \\
+& BasicVSR & 7 & 29.1144 & 0.830463 \\
+& BasicVSR++ & 7 & 29.3056 & 0.834918 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\subsection{Part 3 Sample Results}
+The adaptive hybrid is not designed to maximize PSNR/SSIM beyond BasicVSR++. Instead, it preserves most of the BasicVSR++ structure while incorporating a controlled amount of Real-ESRGAN detail. On REDS\_002, the hybrid reaches 26.7978 PSNR and 0.898219 SSIM, close to BasicVSR++ at 26.8504 and 0.900157. On Vimeo, the hybrid reaches 29.2463 PSNR and 0.833274 SSIM, again close to BasicVSR++.
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=0.98\textwidth]{../results/part3/REDS_002/comparison/00000050.png}
+  \caption{Part~3 adaptive hybrid example on REDS\_002. BasicVSR++ supplies the stable reconstruction, Real-ESRGAN supplies perceptual detail, and the adaptive mask controls local fusion.}
+  \label{fig:part3}
+\end{figure*}
+
+\subsection{Full REDS Validation Results}
+Table~\ref{tab:redsfull} reports the full REDS validation benchmark. BasicVSR++ obtains the best PSNR and SSIM, showing that temporal propagation and alignment are crucial for GT-aligned VSR. The adaptive hybrid remains close to BasicVSR++ and has slightly lower LPIPS, supporting its role as a lightweight perception-distortion trade-off. Real-ESRGAN has much lower PSNR/SSIM, but it improves LPIPS and tLPIPS compared with classical baselines, which matches its perceptual restoration objective.
+
+\begin{table*}[t]
+\centering
+\small
+\caption{Full REDS validation benchmark averaged over 30 sequences. Higher is better for PSNR/SSIM; lower is better for LPIPS/FID/tLPIPS.}
+\label{tab:redsfull}
+\begin{tabular}{lccccc}
+\toprule
+Method & PSNR & SSIM & LPIPS & FID & tLPIPS \\
+\midrule
+BasicVSR++ & 31.7750 & 0.901598 & 0.156181 & 14.1000 & 0.012558 \\
+Adaptive Hybrid & 31.6592 & 0.898746 & 0.155519 & 15.5069 & 0.013661 \\
+Lanczos & 26.5026 & 0.741679 & 0.485979 & 73.8822 & 0.028244 \\
+Bicubic & 26.2932 & 0.733447 & 0.477673 & 74.6166 & 0.028566 \\
+SRCNN & 25.0887 & 0.725723 & 0.517347 & 88.2411 & 0.024511 \\
+Real-ESRGAN & 24.3263 & 0.691159 & 0.225280 & 71.6246 & 0.009300 \\
+Temporal Avg. & 23.1535 & 0.637528 & 0.530395 & 131.0968 & 0.085997 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=0.49\textwidth]{../results/reds_benchmark_val/figures/reds_additional_psnr.png}
+  \includegraphics[width=0.49\textwidth]{../results/reds_benchmark_val/figures/reds_additional_lpips.png}
+  \caption{Full REDS validation metric trends. BasicVSR++ dominates PSNR, while Real-ESRGAN and the adaptive hybrid show the expected perceptual-metric trade-off.}
+  \label{fig:metrictrends}
+\end{figure*}
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=0.98\textwidth]{../results/reds_benchmark_val/figures/REDS_000_rendering_comparison.png}
+  \caption{Qualitative rendering comparison on REDS validation. Interpolation baselines are stable but blurry, Real-ESRGAN generates sharper perceptual texture, BasicVSR++ gives the strongest GT-aligned reconstruction, and the hybrid selectively incorporates perceptual details.}
+  \label{fig:rendering}
+\end{figure*}
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=0.98\textwidth]{../results/reds_benchmark_val/figures/REDS_000_zoom_patches.png}
+  \caption{Zoom-in patch comparison on REDS validation. The patch view highlights local edge and texture behavior across methods.}
+  \label{fig:zoom}
+\end{figure*}
+
+\subsection{Qualitative Analysis}
+The qualitative results are consistent with the quantitative trends. Bicubic and Lanczos are visually stable but blurry, especially in fine textures. SRCNN does not consistently improve over interpolation, reflecting the limitation of shallow CNNs and lightweight training. Temporal averaging can smooth noise but fails under motion because frames are not aligned. Real-ESRGAN produces sharper local details, but these details may not match GT and can vary frame by frame. BasicVSR++ provides the most faithful reconstruction by exploiting temporal propagation. The adaptive hybrid preserves most BasicVSR++ structure while adding limited perceptual enhancement in textured regions.

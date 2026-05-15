@@ -1,0 +1,39 @@
+\section{Method}
+\subsection{Part 1: Hand-crafted and Shallow CNN Baselines}
+For synthetic datasets with HR frames, we generate LR inputs by bicubic downsampling by a factor of 4. We then reconstruct HR frames with four baselines.
+
+\textbf{Bicubic and Lanczos interpolation.}
+Bicubic interpolation is used as the simplest spatial resampling baseline. Lanczos interpolation uses a sinc-windowed kernel and often preserves sharper edges than bicubic, although it can introduce ringing.
+
+\textbf{SRCNN.}
+We implement a three-layer SRCNN model following the classic design~\cite{dong2015srcnn}. The LR frame is first upsampled by bicubic interpolation to the target HR size, then refined by convolutional layers with kernel sizes $9$, $5$, and $5$. SRCNN is frame-independent and therefore does not model temporal consistency.
+
+\textbf{Temporal averaging.}
+For each bicubic-upsampled frame $I_t$, we apply a weighted temporal average:
+\begin{equation}
+\hat{I}_t = 0.25 I_{t-1} + 0.5 I_t + 0.25 I_{t+1},
+\end{equation}
+with boundary frames clamped to the nearest available index. We then apply a light unsharp mask. This baseline intentionally does not perform motion compensation, making it useful for demonstrating why alignment is important.
+
+\subsection{Part 2: Pretrained SOTA Reproduction}
+\textbf{Real-ESRGAN.}
+Real-ESRGAN is applied frame by frame using the official x4plus weights. It is designed for blind perceptual restoration and can generate sharper textures than interpolation. However, because it is image-based and optimized for perceptual realism, its output may deviate from GT pixels and may not be temporally consistent.
+
+\textbf{BasicVSR and BasicVSR++.}
+BasicVSR processes an LR sequence as a tensor of shape $(B,T,C,H,W)$ and uses bidirectional propagation with optical-flow alignment. BasicVSR++ improves this with stronger propagation and alignment. We reproduce both models on mandatory sample data. For the full REDS validation benchmark, we report BasicVSR++ as the stronger VSR representative to control computational cost while preserving the main SOTA comparison.
+
+\subsection{Part 3: Adaptive Hybrid Refinement}
+Part~3 targets the trade-off between distortion fidelity and perceptual sharpness. BasicVSR++ provides a stable GT-aligned backbone, while Real-ESRGAN provides sharper perceptual details. We fuse them using:
+\begin{equation}
+H_t = (1 - M_t)B_t + M_tR_t,
+\end{equation}
+where $B_t$ is the BasicVSR++ frame, $R_t$ is the Real-ESRGAN frame, and $M_t$ is an adaptive mask clipped to a maximum weight of 0.65.
+
+The mask is computed from three cues. First, edge strength encourages Real-ESRGAN contribution in textured regions. Second, disagreement between $B_t$ and $R_t$ suppresses the mask when Real-ESRGAN deviates strongly from the stable backbone. Third, temporal frame difference in the BasicVSR++ sequence suppresses Real-ESRGAN in high-motion regions where hallucinated details are more likely to flicker. The mask is smoothed with a Gaussian filter. This method does not require additional training and is computationally cheap.
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=0.95\textwidth]{../results/reds_benchmark_val/figures/pipeline_flowchart.png}
+  \caption{Overall experimental pipeline. HR frames are synthetically degraded to x4 LR inputs, processed by Part~1 baselines, Part~2 pretrained methods, and Part~3 adaptive fusion, then evaluated with pixel, perceptual, temporal, and qualitative metrics.}
+  \label{fig:pipeline}
+\end{figure*}

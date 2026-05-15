@@ -1,0 +1,12 @@
+\section{Related Work}
+\textbf{Single-image super-resolution.}
+SRCNN~\cite{dong2015srcnn} is an early CNN-based SR model that refines a bicubic-upsampled LR image using three convolutional layers. It provides a natural baseline between hand-crafted interpolation and deeper SR networks. SRGAN~\cite{ledig2017srgan} introduces adversarial and perceptual losses to improve photo-realism, showing that perceptual quality can conflict with PSNR. EDSR~\cite{lim2017edsr} improves residual architectures for high-fidelity SR and demonstrates the importance of stronger CNN capacity.
+
+\textbf{Video super-resolution and alignment.}
+EDVR~\cite{wang2019edvr} uses deformable convolution and temporal-spatial attention for video restoration. TDAN~\cite{tian2020tdan} aligns neighboring frames with temporally deformable modules. BasicVSR~\cite{chan2021basicvsr} identifies bidirectional propagation and optical-flow-based alignment as essential components for VSR. BasicVSR++~\cite{chan2022basicvsrpp} further improves propagation with second-order grid propagation and enhanced alignment, making it a strong pretrained VSR backbone for our Part~2 and Part~3 experiments.
+
+\textbf{Perceptual and generative restoration.}
+Real-ESRGAN~\cite{wang2021realesrgan} trains blind SR with synthetic degradations and GAN objectives, making it useful for real-world LR videos. Diffusion-based SR such as SR3~\cite{saharia2022sr3} uses iterative refinement to generate high-quality images, while latent diffusion~\cite{rombach2022ldm} and conditional control methods such as ControlNet~\cite{zhang2023controlnet} provide strong image priors. Flow matching~\cite{lipman2023flowmatching} proposes a generative modeling framework with straighter probability paths. LoRA~\cite{hu2022lora} is often used as a lightweight adaptation technique for large generative models. These generative directions are powerful but computationally expensive for a course project. We therefore adopt an uncertainty-aware hybrid direction that keeps inference lightweight.
+
+\textbf{Datasets and metrics.}
+The REDS dataset~\cite{nah2019reds} is a standard benchmark for video deblurring and super-resolution. Vimeo-90K~\cite{xue2019vimeo90k} is another widely used video enhancement dataset with high-quality frame triplets and septuplets. For evaluation, PSNR and SSIM~\cite{wang2004ssim} measure pixel fidelity, LPIPS~\cite{zhang2018lpips} measures perceptual similarity using deep features, and temporal perceptual differences are commonly used to analyze flicker in video restoration~\cite{chu2020tlpips}.

@@ -6,16 +6,25 @@ Files:
 
 ```text
 report/main.tex
+report/cvpr_main.tex
+report/preamble.tex
 report/references.bib
+report/main.bib
+report/sec/*.tex
 ```
 
-The project handout asks for the CVPR LaTeX template and a 6--8 page report excluding references. This draft uses a CVPR-like two-column article layout because the official CVPR template files are not included in the repository. To submit with the official template:
+The project handout asks for the CVPR LaTeX template and a 6--8 page report excluding references. Two entry points are provided:
+
+- `main.tex`: standalone CVPR-like article draft that does not require the official `cvpr.sty`.
+- `cvpr_main.tex`: official CVPR author-kit style entry file matching the provided template structure.
+
+To submit with the official template:
 
 1. Download the CVPR LaTeX template.
-2. Copy the body of `main.tex` into the official `main.tex`.
-3. Keep `references.bib` as the bibliography file.
+2. Copy `cvpr_main.tex` to the official template's `main.tex`.
+3. Copy `preamble.tex`, `main.bib`, and the `sec/` folder into the official template directory.
 4. Replace `Student 1` and `Student 2` with the real group member names.
-5. Compile from the repository root or update figure paths if the report folder is moved.
+5. Compile from the `report/` directory or update figure paths if the report folder is moved.
 
 Key requirements already included:
 
